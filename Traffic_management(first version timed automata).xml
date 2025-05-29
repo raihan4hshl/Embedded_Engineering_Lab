@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>
+// —— PARAMETERS ——
+const int N = 12;            // number of movements
+const int P = 5;             // number of safe batches (phases)
+const int minA = 2, maxA = 5;  // arrival interval bounds
+const int G = 10;            // green‐go time units
+const int Y = 3;             // all‐red gap time units
+
+// —— QUEUES &amp; WEIGHTS ——
+int q[12] = {0,0,0,0,0,0,0,0,0,0,0,0};              // queue lengths per movement
+int weight[P];               // computed weight per phase
+int best;                    // index of chosen phase
+
+// —— PHASE MASKS ——
+int PHASE_MASK[P][N] = {
+  {1,0,0, 1,0,0, 1,0,0, 1,0,0},  // P0: all straights
+  {0,0,1, 0,0,1, 0,0,1, 0,0,1},  // P1: all rights
+  {0,1,0, 0,1,0, 0,1,0, 0,1,0},  // P2: all lefts
+  {1,0,1, 1,0,1, 0,0,0, 0,0,0},  // P3: NS straights+rights
+  {0,0,0, 0,0,0, 1,0,1, 1,0,1}   // P4: EW straights+rights
+};
+</declaration>
+	<template>
+		<name x="5" y="5">Controller</name>
+		<declaration>clock t, c;
+</declaration>
+		<location id="id0" x="-238" y="-93">
+			<name x="-248" y="-127">Arrive</name>
+		</location>
+		<location id="id1" x="-59" y="-85">
+			<name x="-69" y="-119">Compute</name>
+		</location>
+		<location id="id2" x="136" y="-119">
+			<name x="126" y="-153">Green</name>
+			<label kind="invariant" x="119" y="-111">c &lt;= G</label>
+		</location>
+		<location id="id3" x="442" y="-59">
+			<name x="432" y="-93">Gap</name>
+			<label kind="invariant" x="432" y="-42">c &lt;= Y</label>
+		</location>
+		<init ref="id0"/>
+		<transition id="id4">
+			<source ref="id3"/>
+			<target ref="id0"/>
+			<label kind="guard" x="-237" y="212">c &gt;= Y</label>
+			<label kind="assignment" x="-237" y="246">t = 0</label>
+			<nail x="280" y="238"/>
+			<nail x="280" y="238"/>
+			<nail x="-255" y="221"/>
+		</transition>
+		<transition id="id5">
+			<source ref="id2"/>
+			<target ref="id3"/>
+			<label kind="guard" x="153" y="-59">c &gt;= G</label>
+			<label kind="assignment" x="153" y="-76">c = 0</label>
+		</transition>
+		<transition id="id6">
+			<source ref="id1"/>
+			<target ref="id2"/>
+			<label kind="guard" x="0" y="-59">true</label>
+			<label kind="assignment" x="-127" y="-17">weight[0] = q[0] + q[3] + q[6] + q[9],
+weight[1] = q[2] + q[5] + q[8] + q[11],
+weight[2] = q[1] + q[4] + q[7] + q[10],
+weight[3] = q[0] + q[2] + q[3] + q[5],
+weight[4] = q[6] + q[8] + q[9] + q[11],
+best = (weight[1] &gt; weight[0] ? 1 : 0),
+best = (weight[2] &gt; weight[best] ? 2 : best),
+best = (weight[3] &gt; weight[best] ? 3 : best),
+best = (weight[4] &gt; weight[best] ? 4 : best),
+c = 0</label>
+		</transition>
+		<transition id="id7">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-204" y="-68">t &gt;= maxA</label>
+			<label kind="assignment" x="-195" y="-42">t = 0</label>
+		</transition>
+		<transition id="id8">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="select" x="-288" y="-191">m : int[0,N-1]</label>
+			<label kind="guard" x="-288" y="-174">t &gt;= minA &amp;&amp; t &lt;= maxA</label>
+			<label kind="assignment" x="-280" y="-153">q[m] = q[m] + 1, t = 0</label>
+			<nail x="-306" y="-187"/>
+			<nail x="-178" y="-212"/>
+		</transition>
+	</template>
+	<system>
+system Controller;
+</system>
+	<queries>
+		<query>
+			<formula>A&lt;&gt; forall(i:int[0,N-1]) q[i] == 0
+</formula>
+			<comment/>
+		</query>
+	</queries>
+</nta>
