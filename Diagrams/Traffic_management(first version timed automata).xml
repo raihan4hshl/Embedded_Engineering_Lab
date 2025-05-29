@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>// ── PARAMETERS ───────────────────────────
+const int N    = 12;           // # of movements (4 approaches × 3 turn types)
+const int P    = 5;            // # of safe phases
+const int minA = 2, maxA = 5;  // arrival interval bounds (memoryless approx)
+const int G    = 10;           // green‐go duration (time units)
+const int Y    = 3;            // all‐red gap duration (time units)
+
+// ── QUEUES &amp; WEIGHTS ────────────────────
+int q[12] = {0,0,0,0,0,0,0,0,0,0,0,0};     // queue length per movement
+int weight[P];                // total queue per phase
+int best;                     // index of chosen phase
+
+// ── PHASE MASKS ─────────────────────────
+// Movement indexing example (0–11):
+//  0=N→S  1=N→W  2=N→E
+//  3=S→N  4=S→E  5=S→W
+//  6=E→W  7=E→N  8=E→S
+//  9=W→E 10=W→S 11=W→N
+int PHASE_MASK[P][N] = {
+  // P0: NS‐straight (N→S &amp; S→N)
+  {1,0,0,  1,0,0,  0,0,0,  0,0,0},
+
+  // P1: EW‐straight (E→W &amp; W→E)
+  {0,0,0,  0,0,0,  1,0,0,  1,0,0},
+
+  // P2: All right‐turns (N→E, E→S, S→W, W→N)
+  {0,0,1,  0,0,1,  0,0,1,  0,0,1},
+
+  // P3: Left‐turn pair 1 (N→W &amp; S→E)
+  {0,1,0,  0,1,0,  0,0,0,  0,0,0},
+
+  // P4: Left‐turn pair 2 (E→N &amp; W→S)
+  {0,0,0,  0,0,0,  0,1,0,  0,0,1}
+};
+
+
+
+
+
+
+
+
+
+
+
+
+</declaration>
+	<template>
+		<name x="5" y="5">Controller</name>
+		<declaration>clock t, c;
+</declaration>
+		<location id="id0" x="-238" y="-93">
+			<name x="-248" y="-127">Arrive</name>
+		</location>
+		<location id="id1" x="-59" y="-85">
+			<name x="-69" y="-119">Compute</name>
+		</location>
+		<location id="id2" x="136" y="-85">
+			<name x="126" y="-119">Green</name>
+			<label kind="invariant" x="119" y="-77">c &lt;= G</label>
+		</location>
+		<location id="id3" x="450" y="-85">
+			<name x="440" y="-119">Gap</name>
+			<label kind="invariant" x="440" y="-68">c &lt;= Y</label>
+		</location>
+		<init ref="id0"/>
+		<transition id="id4">
+			<source ref="id3"/>
+			<target ref="id0"/>
+			<label kind="guard" x="-255" y="221">c &gt;= Y</label>
+			<label kind="assignment" x="-237" y="246">t = 0</label>
+			<nail x="331" y="255"/>
+			<nail x="246" y="306"/>
+			<nail x="-289" y="246"/>
+		</transition>
+		<transition id="id5">
+			<source ref="id2"/>
+			<target ref="id3"/>
+			<label kind="guard" x="238" y="-76">c &gt;= G</label>
+			<label kind="assignment" x="229" y="-110">c = 0</label>
+		</transition>
+		<transition id="id6">
+			<source ref="id1"/>
+			<target ref="id2"/>
+			<label kind="guard" x="8" y="-101">true</label>
+			<label kind="assignment" x="-85" y="-59">// 1) compute each phase’s total
+weight[0] = q[0] + q[3],
+weight[1] = q[6] + q[9],
+weight[2] = q[2] + q[5] + q[8] + q[11],
+weight[3] = q[1] + q[4],
+weight[4] = q[7] + q[10],
+
+// 2) pick the heaviest phase
+best = (weight[1] &gt; weight[0] ? 1 : 0),
+best = (weight[2] &gt; weight[best] ? 2 : best),
+best = (weight[3] &gt; weight[best] ? 3 : best),
+best = (weight[4] &gt; weight[best] ? 4 : best),
+
+// 3) clear the served queues immediately
+q[0]  = (best==0 ? 0 : q[0]),
+q[3]  = (best==0 ? 0 : q[3]),
+q[6]  = (best==1 ? 0 : q[6]),
+q[9]  = (best==1 ? 0 : q[9]),
+q[2]  = (best==2 ? 0 : q[2]),
+q[5]  = (best==2 ? 0 : q[5]),
+q[8]  = (best==2 ? 0 : q[8]),
+q[11] = (best==2 ? 0 : q[11]),
+q[1]  = (best==3 ? 0 : q[1]),
+q[4]  = (best==3 ? 0 : q[4]),
+q[7]  = (best==4 ? 0 : q[7]),
+q[10] = (best==4 ? 0 : q[10]),
+
+// 4) reset the green timer
+c = 0</label>
+		</transition>
+		<transition id="id7">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-204" y="-68">t &gt;= maxA</label>
+			<label kind="assignment" x="-195" y="-42">t = 0</label>
+		</transition>
+		<transition id="id8">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="select" x="-288" y="-191">m : int[0,N-1]</label>
+			<label kind="guard" x="-288" y="-174">t &gt;= minA &amp;&amp; t &lt;= maxA</label>
+			<label kind="assignment" x="-280" y="-153">q[m] = q[m] + 1, t = 0</label>
+			<nail x="-306" y="-187"/>
+			<nail x="-178" y="-212"/>
+		</transition>
+	</template>
+	<system>system Controller;
+</system>
+	<queries>
+		<query>
+			<formula>A[] best &gt;= 0 &amp;&amp; best &lt; 5
+</formula>
+			<comment/>
+		</query>
+	</queries>
+</nta>
