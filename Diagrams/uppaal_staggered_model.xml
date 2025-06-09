@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>
+    broadcast chan request[4][1], allow[4][1];
+    int currentQueue = 0;
+    clock aTime[4][1];
+  </declaration>
+	<template>
+		<name>VehicleQ0</name>
+		<parameter>int id</parameter>
+		<declaration>
+      clock t, wait;
+    </declaration>
+		<location id="id0" x="0" y="0">
+			<name x="-20" y="-20">Init</name>
+		</location>
+		<location id="id1" x="127" y="-212">
+			<name x="107" y="-232">EnteringQueue</name>
+		</location>
+		<location id="id2" x="300" y="0">
+			<name x="272" y="8">Requesting</name>
+		</location>
+		<location id="id3" x="442" y="-212">
+			<name x="432" y="-232">Crossing</name>
+		</location>
+		<location id="id4" x="600" y="0">
+			<name x="569" y="17">Crossed</name>
+		</location>
+		<init ref="id0"/>
+		<transition id="id5">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-17" y="-144">wait &gt;= 0</label>
+			<label kind="synchronisation" x="34" y="-59">request[0][id]!</label>
+		</transition>
+		<transition id="id6">
+			<source ref="id1"/>
+			<target ref="id2"/>
+			<label kind="assignment" x="102" y="-127">aTime[0][id] := 0</label>
+		</transition>
+		<transition id="id7">
+			<source ref="id2"/>
+			<target ref="id3"/>
+			<label kind="guard" x="255" y="-187">currentQueue == 0</label>
+			<label kind="synchronisation" x="365" y="-93">allow[0][id]?</label>
+			<label kind="assignment" x="297" y="-110">t := 0</label>
+		</transition>
+		<transition id="id8">
+			<source ref="id3"/>
+			<target ref="id4"/>
+			<label kind="guard" x="518" y="-136">t &gt;= 2</label>
+		</transition>
+	</template>
+	<template>
+		<name>VehicleQ1</name>
+		<parameter>int id</parameter>
+		<declaration>
+      clock t, wait;
+    </declaration>
+		<location id="id9" x="-8" y="0">
+			<name x="-28" y="-20">Init</name>
+		</location>
+		<location id="id10" x="-8" y="-195">
+			<name x="-28" y="-215">EnteringQueue</name>
+		</location>
+		<location id="id11" x="51" y="-110">
+			<name x="17" y="-102">Requesting</name>
+		</location>
+		<location id="id12" x="119" y="-195">
+			<name x="109" y="-215">Crossing</name>
+		</location>
+		<location id="id13" x="119" y="0">
+			<name x="97" y="17">Crossed</name>
+		</location>
+		<init ref="id9"/>
+		<transition id="id14">
+			<source ref="id9"/>
+			<target ref="id10"/>
+			<label kind="guard" x="-85" y="-127">wait &gt;= 2</label>
+			<label kind="synchronisation" x="15" y="-15">request[1][id]!</label>
+		</transition>
+		<transition id="id15">
+			<source ref="id10"/>
+			<target ref="id11"/>
+			<label kind="assignment" x="-110" y="-170">aTime[1][id] := 0</label>
+		</transition>
+		<transition id="id16">
+			<source ref="id11"/>
+			<target ref="id12"/>
+			<label kind="guard" x="93" y="-170">currentQueue == 1</label>
+			<label kind="synchronisation" x="93" y="-144">allow[1][id]?</label>
+			<label kind="assignment" x="34" y="-153">t := 0</label>
+		</transition>
+		<transition id="id17">
+			<source ref="id12"/>
+			<target ref="id13"/>
+			<label kind="guard" x="127" y="-59">t &gt;= 2</label>
+		</transition>
+	</template>
+	<template>
+		<name>VehicleQ2</name>
+		<parameter>int id</parameter>
+		<declaration>
+      clock t, wait;
+    </declaration>
+		<location id="id18" x="0" y="0">
+			<name x="-20" y="-20">Init</name>
+		</location>
+		<location id="id19" x="144" y="-187">
+			<name x="124" y="-207">EnteringQueue</name>
+		</location>
+		<location id="id20" x="300" y="0">
+			<name x="272" y="-42">Requesting</name>
+		</location>
+		<location id="id21" x="407" y="136">
+			<name x="374" y="153">Crossing</name>
+		</location>
+		<location id="id22" x="544" y="-25">
+			<name x="518" y="-68">Crossed</name>
+		</location>
+		<init ref="id18"/>
+		<transition id="id23">
+			<source ref="id18"/>
+			<target ref="id19"/>
+			<label kind="guard" x="102" y="-119">wait &gt;= 4</label>
+			<label kind="synchronisation" x="-59" y="-110">request[2][id]!</label>
+		</transition>
+		<transition id="id24">
+			<source ref="id19"/>
+			<target ref="id20"/>
+			<label kind="assignment" x="165" y="0">aTime[2][id] := 0</label>
+		</transition>
+		<transition id="id25">
+			<source ref="id20"/>
+			<target ref="id21"/>
+			<label kind="guard" x="323" y="8">currentQueue == 2</label>
+			<label kind="synchronisation" x="348" y="51">allow[2][id]?</label>
+			<label kind="assignment" x="280" y="59">t := 0</label>
+		</transition>
+		<transition id="id26">
+			<source ref="id21"/>
+			<target ref="id22"/>
+			<label kind="guard" x="501" y="42">t &gt;= 2</label>
+		</transition>
+	</template>
+	<template>
+		<name>VehicleQ3</name>
+		<parameter>int id</parameter>
+		<declaration>
+      clock t, wait;
+    </declaration>
+		<location id="id27" x="0" y="0">
+			<name x="-20" y="-20">Init</name>
+		</location>
+		<location id="id28" x="0" y="-93">
+			<name x="-20" y="-113">EnteringQueue</name>
+		</location>
+		<location id="id29" x="289" y="-93">
+			<name x="269" y="-113">Requesting</name>
+		</location>
+		<location id="id30" x="289" y="8">
+			<name x="255" y="25">Crossing</name>
+		</location>
+		<location id="id31" x="600" y="0">
+			<name x="590" y="-20">Crossed</name>
+		</location>
+		<init ref="id27"/>
+		<transition id="id32">
+			<source ref="id27"/>
+			<target ref="id28"/>
+			<label kind="guard" x="15" y="-30">wait &gt;= 6</label>
+			<label kind="synchronisation" x="15" y="-15">request[3][id]!</label>
+		</transition>
+		<transition id="id33">
+			<source ref="id28"/>
+			<target ref="id29"/>
+			<label kind="assignment" x="102" y="-85">aTime[3][id] := 0</label>
+		</transition>
+		<transition id="id34">
+			<source ref="id29"/>
+			<target ref="id30"/>
+			<label kind="guard" x="297" y="-76">currentQueue == 3</label>
+			<label kind="synchronisation" x="365" y="-17">allow[3][id]?</label>
+			<label kind="assignment" x="315" y="0">t := 0</label>
+		</transition>
+		<transition id="id35">
+			<source ref="id30"/>
+			<target ref="id31"/>
+			<label kind="guard" x="476" y="8">t &gt;= 2</label>
+		</transition>
+	</template>
+	<template>
+		<name>Controller</name>
+		<declaration>
+      clock x;
+    </declaration>
+		<location id="id36" x="0" y="0">
+			<name x="-17" y="-34">Start</name>
+		</location>
+		<location id="id37" x="170" y="153">
+			<name x="136" y="178">Scheduling</name>
+		</location>
+		<location id="id38" x="170" y="-229">
+			<name x="136" y="-263">Checking</name>
+		</location>
+		<location id="id39" x="450" y="0">
+			<name x="467" y="-17">Allowing</name>
+		</location>
+		<init ref="id36"/>
+		<transition id="id40">
+			<source ref="id36"/>
+			<target ref="id37"/>
+			<label kind="guard" x="93" y="59">x &gt;= 2</label>
+			<label kind="assignment" x="15" y="0">x := 0</label>
+		</transition>
+		<transition id="id41">
+			<source ref="id37"/>
+			<target ref="id38"/>
+			<label kind="guard" x="127" y="-68">x &gt;= 2</label>
+		</transition>
+		<transition id="id42">
+			<source ref="id38"/>
+			<target ref="id39"/>
+			<label kind="synchronisation" x="187" y="-85">request[currentQueue][0]?</label>
+		</transition>
+		<transition id="id43">
+			<source ref="id39"/>
+			<target ref="id37"/>
+			<label kind="synchronisation" x="255" y="102">allow[currentQueue][0]!</label>
+			<label kind="assignment" x="212" y="42">x := 0, currentQueue = (currentQueue + 1) % 4</label>
+		</transition>
+	</template>
+	<system>
+    VQ0 = VehicleQ0(0);
+    VQ1 = VehicleQ1(0);
+    VQ2 = VehicleQ2(0);
+    VQ3 = VehicleQ3(0);
+    C = Controller();
+    system VQ0, VQ1, VQ2, VQ3, C;
+  </system>
+	<queries>
+		<query>
+			<formula>A[] not deadlock</formula>
+			<comment>No deadlock</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; VQ0.v0_4 and VQ1.v1_4 and VQ2.v2_4 and VQ3.v3_4</formula>
+			<comment>All vehicles eventually cross</comment>
+		</query>
+	</queries>
+</nta>
