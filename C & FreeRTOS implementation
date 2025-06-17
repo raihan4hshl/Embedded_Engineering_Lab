@@ -1,191 +1,130 @@
 
+
 #include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
 
+// — PARAMETERS (in milliseconds) —
+static const uint32_t MIN_ARRIVAL = 5000;   // 5–10 s between arrivals
+static const uint32_t MAX_ARRIVAL = 10000;
+static const uint32_t GREEN_TIME   = 8000;  // 8 s green
+static const uint32_t GAP_TIME     = 2000;  // 2 s all-red
 
-extern "C" {
-  #include "freertos/FreeRTOS.h"
-  #include "freertos/task.h"
-  #include "freertos/semphr.h"
-}
-
-// —— PARAMETERS ——
-#define N     12       // 4 approaches × 3 movements
-#define P     5        // number of safe phases
-#define minA  2000     // min arrival interval in milliseconds
-#define maxA  5000     // max arrival interval in milliseconds
-#define G     10000    // green duration (ms)
-#define Y     3000     // all-red gap (ms)
-
-// —— QUEUES & WEIGHTS ——
-static int q[N] = {0};   // queue length for each movement
-static int weight[P];    // total queue per phase
-static int best;         // index of chosen phase
-
-// —— PHASE MASKS ——
-const uint8_t PHASE_MASK[P][N] = {
-  // Phase 0: NS-straight (N→S = 0, S→N = 3)
-  {1,0,0,  1,0,0,  0,0,0,  0,0,0},
-  // Phase 1: EW-straight (E→W = 6, W→E = 9)
-  {0,0,0,  0,0,0,  1,0,0,  1,0,0},
-  // Phase 2: All-right (N→E=2, S→W=5, E→S=8, W→N=11)
-  {0,0,1,  0,0,1,  0,0,1,  0,0,1},
-  // Phase 3: Left-turn pair 1 (N→W=1, S→E=4)
-  {0,1,0,  0,1,0,  0,0,0,  0,0,0},
-  // Phase 4: Left-turn pair 2 (E→N=7, W→S=10)
-  {0,0,0,  0,0,0,  0,1,0,  0,0,1}
+// — QUEUE LENGTHS & LABELS —
+static int q[4] = {0, 0, 0, 0};
+static const char* phaseName[4] = {
+  "NS Through/Right",
+  "EW Through/Right",
+  "NS Left",
+  "EW Left"
+};
+static const char* arrNames[4] = {
+  "Arrival0", "Arrival1", "Arrival2", "Arrival3"
 };
 
+// — MUTEX for protecting q[] increments/reads —
+SemaphoreHandle_t qMutex;
 
-const char *movementName[N] = {
-  "N→S straight", "N→W left",   "N→E right",
-  "S→N straight", "S→E left",   "S→W right",
-  "E→W straight", "E→N left",   "E→S right",
-  "W→E straight", "W→S left",   "W→N right"
-};
-const char *phaseName[P] = {
-  "Phase 0: NS-straight",
-  "Phase 1: EW-straight",
-  "Phase 2: All-right turns",
-  "Phase 3: Left (N→W & S→E)",
-  "Phase 4: Left (E→N & W→S)"
-};
-
-// Mutex to protect q[] access
-SemaphoreHandle_t xQueueMutex;
-
-
-// Simulates a car arriving at a random interval and increments one random queue index.
-void vArrivalTask(void *pvParameters) {
+// --------------------------------------------------
+// Arrival Task: simulates one bundle’s random arrivals
+// --------------------------------------------------
+void arrivalTask(void* pvParameters) {
+  int idx = (int)(intptr_t)pvParameters;
   for (;;) {
-    
-    uint32_t delay_ms = random(minA, maxA);
-    vTaskDelay(pdMS_TO_TICKS(delay_ms));
+    // wait a random interval
+    vTaskDelay(pdMS_TO_TICKS(random(MIN_ARRIVAL, MAX_ARRIVAL)));
 
-    // Pick a random movement index m ∈ [0..N-1]
-    int m = random(0, N);
-
-    // Lock the queue array, increment, unlock
-    xSemaphoreTake(xQueueMutex, portMAX_DELAY);
-      q[m]++;
-      Serial.print("Arrived: ");
-      Serial.print(movementName[m]);
-      Serial.print(", q[");
-      Serial.print(m);
-      Serial.print("] = ");
-      Serial.println(q[m]);
-    xSemaphoreGive(xQueueMutex);
+    // safely increment queue length
+    xSemaphoreTake(qMutex, portMAX_DELAY);
+      q[idx]++;
+      Serial.printf("[ARRIVAL] %s → q[%d] = %d\n",
+                    phaseName[idx], idx, q[idx]);
+    xSemaphoreGive(qMutex);
   }
 }
 
+// --------------------------------------------------
+// Scheduler Task: picks the heaviest queue & serves it
+// --------------------------------------------------
+void schedulerTask(void*) {
+  // give a head start for some arrivals
+  vTaskDelay(pdMS_TO_TICKS(2000));
 
-// Runs every maxA milliseconds, computes max-weight phase, grants green, prints log, then waits G (green) and Y (all-red gap).
-void vSchedulerTask(void *pvParameters) {
   for (;;) {
-    // 1) Wait exactly maxA ms for arrivals to accumulate
-    vTaskDelay(pdMS_TO_TICKS(maxA));
+    // wait until at least one car is waiting
+    int total;
+    do {
+      vTaskDelay(pdMS_TO_TICKS(500));
+      xSemaphoreTake(qMutex, portMAX_DELAY);
+        total = q[0] + q[1] + q[2] + q[3];
+      xSemaphoreGive(qMutex);
+    } while (total == 0);
 
-    // 2) Compute each phase's weight under mutex
-    xSemaphoreTake(xQueueMutex, portMAX_DELAY);
-      for (int p = 0; p < P; ++p) {
-        weight[p] = 0;
-        for (int i = 0; i < N; ++i) {
-          if (PHASE_MASK[p][i]) {
-            weight[p] += q[i];
-          }
-        }
+    // compute & pick the heaviest queue
+    xSemaphoreTake(qMutex, portMAX_DELAY);
+      int best = 0;
+      for (int i = 1; i < 4; ++i) {
+        if (q[i] > q[best]) best = i;
       }
-      // 3) Pick the heaviest phase
-      best = 0;
-      for (int p = 1; p < P; ++p) {
-        if (weight[p] > weight[best]) {
-          best = p;
-        }
-      }
+      int served = q[best];
+      q[best] = 0;
+    xSemaphoreGive(qMutex);
 
-      // 4a) Record how many cars will cross in this phase
-      int servedCount[N] = {0};
-      for (int i = 0; i < N; ++i) {
-        if (PHASE_MASK[best][i]) {
-          servedCount[i] = q[i];
-        }
-      }
+    // announce green start
+    Serial.printf("\n>> GREEN START: %s\n"
+                  "   Cars served: %d\n"
+                  "   Queues now:  [%d, %d, %d, %d]\n",
+                  phaseName[best], served,
+                  q[0], q[1], q[2], q[3]);
 
-      // 4b) Clear the served queues
-      for (int i = 0; i < N; ++i) {
-        if (PHASE_MASK[best][i]) {
-          q[i] = 0;
-        }
-      }
+    // hold green
+    vTaskDelay(pdMS_TO_TICKS(GREEN_TIME));
+    Serial.printf("<< GREEN END:   %s\n", phaseName[best]);
 
-      // 5) Print which phase was selected & corresponding weights
-      Serial.print(">>> ");
-      Serial.print(phaseName[best]);
-      Serial.print(" selected  (weights:");
-      for (int p = 0; p < P; ++p) {
-        Serial.print(" ");
-        Serial.print(weight[p]);
-      }
-      Serial.println(" )");
-
-      // 6) Announce GREEN and each direction served
-      Serial.print(">>> ");
-      Serial.print(phaseName[best]);
-      Serial.println(" is now GREEN");
-      for (int i = 0; i < N; ++i) {
-        if (servedCount[i] > 0) {
-          Serial.print("    Direction ");
-          Serial.print(movementName[i]);
-          Serial.print(": ");
-          Serial.print(servedCount[i]);
-          Serial.println(" car(s) crossed");
-        }
-      }
-    xSemaphoreGive(xQueueMutex);
-
-    // 7) GREEN interval
-    Serial.println("→ GREEN");
-    vTaskDelay(pdMS_TO_TICKS(G));
-
-    // 8) ALL-RED GAP interval
-    Serial.print(">>> ");
-    Serial.print(phaseName[best]);
-    Serial.println(" is now in GAP");
-    Serial.println("→ GAP");
-    vTaskDelay(pdMS_TO_TICKS(Y));
+    // all-red gap
+    Serial.println("** ALL-RED GAP **");
+    vTaskDelay(pdMS_TO_TICKS(GAP_TIME));
   }
 }
 
+// --------------------------------------------------
+// Arduino setup() & loop()
+// --------------------------------------------------
 void setup() {
-  // Initialize Serial at 115200 baud
   Serial.begin(115200);
-  delay(200);                 // Give USB-Serial a moment to start
-  randomSeed(analogRead(0));  // Seed random() from a floating analog pin
+  delay(200);
+  Serial.println("\n--- 4-Queue Dynamic Max-Weight Scheduler ---");
 
-  // Create the mutex for protecting q[]
-  xQueueMutex = xSemaphoreCreateMutex();
+  // create the mutex
+  qMutex = xSemaphoreCreateMutex();
 
-  // Start the Arrival Task (priority 2, 2048 bytes stack)
+  // seed random from an analog pin
+  randomSeed(analogRead(34));
+
+  // launch four arrival tasks
+  for (int i = 0; i < 4; ++i) {
+    xTaskCreate(
+      arrivalTask,            // function
+      arrNames[i],            // task name (const char*)
+      2048,                   // stack size
+      (void*)(intptr_t)i,     // parameter = queue index
+      1,                      // priority
+      NULL                    // handle (unused)
+    );
+  }
+
+  // launch the scheduler task
   xTaskCreate(
-    vArrivalTask,   // Task function
-    "Arrival",      // Name (for debugging)
-    2048,           // Stack size in bytes
-    NULL,           // Parameter (not used)
-    2,              // Priority (2)
-    NULL            // Task handle (not used)
-  );
-
-  // Start the Scheduler Task (priority 3, 4096 bytes stack)
-  xTaskCreate(
-    vSchedulerTask, // Task function
-    "Scheduler",    // Name
-    4096,           // Stack size
-    NULL,           // Parameter
-    3,              // Priority (3)
-    NULL            // Task handle
+    schedulerTask,
+    "Scheduler",
+    4096,
+    NULL,
+    1,
+    NULL
   );
 }
 
 void loop() {
-  // Empty: FreeRTOS tasks do all work.
+  // nothing here: all work is in FreeRTOS tasks
 }
-
