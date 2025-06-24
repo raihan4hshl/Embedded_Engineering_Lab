@@ -1,0 +1,92 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity tb_scheduler is
+end entity;
+
+architecture sim of tb_scheduler is
+  constant G_tb : integer := 4;
+  constant Y_tb : integer := 2;
+
+  signal clk     : std_logic := '0';
+  signal reset_n : std_logic := '0';
+  signal q0, q1, q2, q3 : unsigned(3 downto 0) := (others=>'0');
+  signal best    : unsigned(1 downto 0);
+  signal green   : std_logic_vector(3 downto 0);
+  signal all_red : std_logic;
+begin
+
+  -- Instantiate the scheduler DUT
+  DUT: entity work.scheduler
+    generic map (G => G_tb, Y => Y_tb)
+    port map (
+      clk     => clk,
+      reset_n => reset_n,
+      q0      => q0,
+      q1      => q1,
+      q2      => q2,
+      q3      => q3,
+      best    => best,
+      green   => green,
+      all_red => all_red
+    );
+
+  -- 1 ns clock
+  clk_proc: process
+  begin
+    wait for 1 ns;
+    clk <= not clk;
+  end process;
+
+  -- Reset
+  stim_proc: process
+  begin
+    reset_n <= '0'; wait for 5 ns;
+    reset_n <= '1';
+    wait;
+  end process;
+
+  -- Dynamic Arrival Simulation
+  arrival_proc: process
+  begin
+    wait for 10 ns; -- start arrivals
+    loop
+      -- Cars arrive in random pattern (demo style)
+      wait for 10 ns;
+      q0 <= q0 + 1;
+
+      wait for 15 ns;
+      q1 <= q1 + 1;
+
+      wait for 20 ns;
+      q2 <= q2 + 1;
+
+      wait for 25 ns;
+      q3 <= q3 + 1;
+    end loop;
+  end process;
+
+  -- Departure Simulation: cars leave when green phase is active
+  departure_proc: process
+  begin
+    wait for 1 ns; -- offset to let arrival happen first
+    loop
+      if green(0) = '1' and q0 > 0 then
+        q0 <= q0 - 1;
+      end if;
+      if green(1) = '1' and q1 > 0 then
+        q1 <= q1 - 1;
+      end if;
+      if green(2) = '1' and q2 > 0 then
+        q2 <= q2 - 1;
+      end if;
+      if green(3) = '1' and q3 > 0 then
+        q3 <= q3 - 1;
+      end if;
+      wait for 1 ns; -- check every clock
+    end loop;
+  end process;
+
+end architecture sim;
+

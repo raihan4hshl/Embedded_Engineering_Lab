@@ -1,0 +1,81 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity scheduler is
+  generic (
+    G : integer := 4;  -- green duration in clock ticks
+    Y : integer := 2   -- all-red gap duration
+  );
+  port (
+    clk     : in  std_logic;
+    reset_n : in  std_logic;
+    q0, q1, q2, q3 : in  unsigned(3 downto 0);  -- 4-bit queues
+    best    : out unsigned(1 downto 0);
+    green   : out std_logic_vector(3 downto 0);
+    all_red : out std_logic
+  );
+end entity scheduler;
+
+architecture rtl of scheduler is
+  type state_t is (COMPUTE, GREEN_S, GAP_S);
+  signal state : state_t := COMPUTE;
+  signal cnt   : integer := 0;
+  signal b     : unsigned(1 downto 0) := (others => '0');
+begin
+
+  process(clk, reset_n)
+  begin
+    if reset_n = '0' then
+      state <= COMPUTE;
+      cnt   <= 0;
+      b     <= (others => '0');
+
+    elsif rising_edge(clk) then
+      case state is
+
+        when COMPUTE =>
+          b <= "00";
+          if q1 > q0 then
+            b <= "01";
+          end if;
+          if q2 > q0 and q2 > q1 then
+            b <= "10";
+          end if;
+          if q3 > q0 and q3 > q1 and q3 > q2 then
+            b <= "11";
+          end if;
+          cnt   <= 0;
+          state <= GREEN_S;
+
+        when GREEN_S =>
+          if cnt < G-1 then
+            cnt <= cnt + 1;
+          else
+            cnt   <= 0;
+            state <= GAP_S;
+          end if;
+
+        when GAP_S =>
+          if cnt < Y-1 then
+            cnt <= cnt + 1;
+          else
+            cnt   <= 0;
+            state <= COMPUTE;
+          end if;
+
+      end case;
+    end if;
+  end process;
+
+  best <= b;
+
+  green(0) <= '1' when state = GREEN_S and b = "00" else '0';
+  green(1) <= '1' when state = GREEN_S and b = "01" else '0';
+  green(2) <= '1' when state = GREEN_S and b = "10" else '0';
+  green(3) <= '1' when state = GREEN_S and b = "11" else '0';
+
+  all_red <= '1' when state = GAP_S else '0';
+
+end architecture rtl;
+
