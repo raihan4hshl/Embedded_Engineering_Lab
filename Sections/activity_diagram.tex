@@ -1,0 +1,96 @@
+\section{SysML Diagram}
+We have used different SysML diagrams to visually represent the system's structure and behavior.
+\subsection{Activity Diagram}
+This diagram models the runtime behavior of a single vehicle as it interacts with the intersection controller:
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\columnwidth]{C:/Users/exone/Documents/GitHub/Embedded_Engineering_Lab/Diagrams/Activity_diagram.png}
+    \caption{Activity diagram}
+    \label{fig:Activity diagram}
+\end{figure} 
+\begin{enumerate}
+    \item Receive arrival + turn intent
+        \begin{enumerate}[label=(\alph*)]
+            \item A vehicle arrives at the stop line and communicates its intended movement (straight, left, or right).
+        \end{enumerate}
+    \item Determine bundle
+        \begin{enumerate}[label=(\alph*)]
+            \item Based on direction (North South or East West) and turn intent (through or left), the vehicle is assigned to one of four “bundles”: NS-TR, EW-TR, NS-L, or EW-L.
+        \end{enumerate}  
+    \item Enqueue into bundle queue
+            \begin{enumerate}[label=(\alph*)]
+            \item The controller places the request in the corresponding queue for later scheduling.
+            \end{enumerate}  
+    \item Check against current green phase
+            \begin{enumerate}[label=(\alph*)]
+                \item If the vehicle bundle matches the currently active (green) phase, it bypasses waiting; otherwise:
+                \begin{enumerate}[label=(\alph*)]
+                \item Send “WAIT” signal
+                \item Remain queued until the green phase switches back.
+                \end{enumerate}  
+            \end{enumerate}  
+    \item Send “GO” signal
+            \begin{enumerate}[label=(\alph*)]
+                \item When its bundle is selected by the scheduling algorithm, the controller grants green.
+            \end{enumerate}  
+    \item Cross intersection safely
+            \begin{enumerate}[label=(\alph*)]
+                \item The vehicle proceeds through the junction under the granted green signal.
+            \end{enumerate}
+\end{enumerate}
+
+\subsection{Requirement Diagram}
+This UML requirements diagram organizes and decomposes the system-level requirement “Intersection Control” into five constituent requirements:
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\columnwidth]{C:/Users/exone/Documents/GitHub/Embedded_Engineering_Lab/Diagrams/requirement_diagram.jpg}
+    \caption{Requirement diagram}
+    \label{fig:Requirement diagram}
+\end{figure} 
+\begin{enumerate}
+    \item Vehicle Detection
+        \begin{enumerate}[label=(\alph*)]
+            \item``The system shall detect and count vehicles approaching from all directions''.
+        \end{enumerate}
+    \item Movement Schedule
+        \begin{enumerate}[label=(\alph*)]
+            \item``The system shall schedule non-conflicting movements to maximize parallel throughput''.
+        \end{enumerate}  
+    \item Central Hub Communication
+            \begin{enumerate}[label=(\alph*)]
+            \item ``The system shall send queue information to and receive grants from a central controller''.
+            \end{enumerate}  
+    \item Parameter Configuration
+            \begin{enumerate}[label=(\alph*)]
+                \item ``The system shall allow configuration of timing parameters (e.g., green/gap duration)''.
+            \end{enumerate}  
+    \item Safety Enforcement
+            \begin{enumerate}[label=(\alph*)]
+                \item ``The system shall enforce all-red gaps and prevent any conflicting movements''.
+            \end{enumerate}
+\end{enumerate}
+
+\subsection{Use Case Diagram}
+This diagram captures the key interactions between two actors and the Infrastructure Intersection Management System:
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\columnwidth]{C:/Users/exone/Documents/GitHub/Embedded_Engineering_Lab/Diagrams/use_case.png}
+    \caption{Requirement diagram}
+    \label{fig:Requirement diagram}
+\end{figure} 
+
+\begin{enumerate}
+    \item \textbf{Actor:} Car
+        \begin{enumerate}[label=(\alph*)]
+            \item Enter Queue
+            \item Enter/Request to Enter Junction
+                \begin{enumerate}[label=(\alph*)]
+                    \item Includes the ``Manage Traffic Flow using Queuing Algorith'' use case.
+                \end{enumerate}
+            \item Exit Junction
+        \end{enumerate}  
+    \item \textbf{Actor:} Intersection Control
+            \begin{enumerate}[label=(\alph*)]
+            \item Invokes “Manage Traffic Flow using Queuing Algorithm” (representing the central controller or coordinating entity that runs the scheduling logic).
+            \end{enumerate}  
+\end{enumerate}

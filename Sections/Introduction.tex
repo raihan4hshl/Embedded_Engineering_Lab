@@ -1,0 +1,16 @@
+\section{Introduction}
+The Cross Traffic Management project deals with the complexity of efficient routing of autonomous vehicles through a four-way intersection. Conventional traffic control methods lack the adaptability and responsiveness needed to manage real-time vehicle flows for autonomous vehicles. To avert these limitations, our implemented system, here, employs a max dynamic weight scheduling algorithm--- dynamically assigning priority to each traffic direction based on real-time queue lengths, vehicle arrival rates, and safety constraints.
+\begin{enumerate}[label=(\alph*)]
+    \item \textbf{Core Logic in C:} The foundational behavior of the intersection controller was implemented in C. This stage established the data structures and algorithms needed to model vehicle queues and calculate dynamic weights for each direction.
+    \item \textbf{FreeRTOS Integration:} To support real-time execution and concurrent processing of sensor data, queue management, and scheduling decisions, the C implementation was ported to FreeRTOS. This ensured deterministic task scheduling and inter-task communication under realistic load conditions.
+    \item \textbf{UPPAAL Verification:} Using UPPAAL, we formally modeled the system’s timing behavior and verified critical properties such as deadlock freedom, bounded waiting time, and correct weight recalculation. This step provided mathematical guarantees of system correctness before hardware realization.
+    \item \textbf{VHDL Hardware Design:} Finally, the scheduling logic was translated into VHDL and simulated in ModelSim. This hardware-oriented implementation demonstrates the feasibility of deploying the controller on FPGA or ASIC platforms for ultra-low-latency intersection management.
+\end{enumerate}
+To achieve the objectives of efficient cross-traffic management, our work is structured around the following research questions:
+\begin{enumerate}[label=(\alph*)]
+    \item \textbf{Queuing Model:} How can we accurately model intersection traffic for autonomous vehicles using queuing theory?
+    \item \textbf{Optimal Scenario:} What scheduling scenarios and weight functions best minimize congestion and waiting times?
+    \item \textbf{Simulation Framework:} How can we simulate the intersection controller—first in C and then under FreeRTOS—and which parameters (e.g., arrival rates, service times, task priorities) are critical to assess performance?
+    \item \textbf{Hardware Realization:} Which components of the system are best suited for hardware implementation, and how can VHDL simulation validate their real-time behavior?
+\end{enumerate}
+By combining software development, real-time operating systems, formal verification, and digital circuit design, this project delivers a scalable and robust traffic control solution suitable for smart intersections in autonomous vehicle networks.

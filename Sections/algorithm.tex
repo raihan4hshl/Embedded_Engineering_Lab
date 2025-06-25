@@ -1,0 +1,79 @@
+\section{Scheduling Algorithm}
+In our centralized traffic management system, we have used dynamic-weight scheduling algorithm to efficiently route autonomous vehicles at the junction. For algorithm design, we sought online help that is browsing for critical steps in ChatGpt. According to suggested guidelines, we designed our algorithm as follows:
+\subsection{Overview and Objectives}
+The algorithm is meant to achieve:
+\begin{enumerate}[label=(\alph*)]
+    \item Dynamic prioritization of competing traffic directions based on real-time metrics.
+    \item Fairness (no direction is starved) and throughput optimization (minimize overall waiting time).
+    \item Safety constraints, e.g., minimum green times, no conflicting movements.
+\end{enumerate}
+\subsection{System Model and Metrics}
+The input and state variables of the scheduler are:
+\begin{enumerate}[label=(\alph*)]
+    \item Queue length $Q_i$ for each direction $i \in \{N, S, E, W\}$
+    \item Arrival rate $\lambda_i$
+ (vehicles/sec) estimated over a sliding window
+    \item Waiting time $W_i$ of the lead vehicle in the queue
+    \item Safety timer $T_{\text{min}}$ ensuring a green phase lasts at least some minimum
+\end{enumerate}
+\subsection{Weight Computation}
+Present the weight function that combines these metrics into a single score per direction:
+$w_i$= $\alpha$$Q_i$ +  $\beta$$\lambda_i$ + $\gamma$$W_i$\\
+where, $\alpha$, $\beta$ and $\gamma$ are tunable coefficients that reflect the relative importance of queue length, flow rate and waiting time.
+\subsection{Algorithm Steps}
+The loop of the scheduler will work like follows:
+\begin{enumerate}
+    \item Sense and Update
+        \begin{enumerate}[label=(\alph*)]
+            \item Read current queue lengths $Q_i$ and arrival rates of $\lambda_i$.
+            \item Update waiting times $W_i$ for vehicles in the queue.
+        \end{enumerate}
+    \item Compute weights
+        \begin{enumerate}[label=(\alph*)]
+            \item For each direction i, we need to compute $w_i$.
+        \end{enumerate}  
+    \item Select Max-Weight Direction
+            \begin{enumerate}[label=(\alph*)]
+            \item We have to select \[d = \arg\max_i (w_i)\]
+            \item Enforce safety constraints, if the previously green directions has not yet met $T_{\text{min}}$, delay switching.
+            \end{enumerate}  
+    \item Grant Green phase
+            \begin{enumerate}[label=(\alph*)]
+            \item Activate green for direction d.
+            \item Start or reset the green-phase timer $T_d$
+            \end{enumerate}  
+    \item Repeat
+            \begin{enumerate}[label=(\alph*)]
+                \item After either a fixed epoch $T_{\text{max}}$ or when $w_d$ falls below the next-highest weight by a threshold, return to the initial point.
+            \end{enumerate}  
+    \item Properties and Tuning
+            \begin{enumerate}[label=(\alph*)]
+                \item \textbf{Fairness:}Because every direction’s weight eventually grows (via $W_i$), starvation is prevented.
+                \item \textbf{Responsiveness:}By tuning $\alpha$, $\beta$ and $\gamma$, the system can emphasize clearing long queues or reacting to sudden surges.
+                \item \textbf{Safety Margins:}$T_{\text{min}}$ avoids rapid toggling.
+            \end{enumerate}
+\end{enumerate}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\columnwidth]{C:/Users/exone/Documents/GitHub/Embedded_Engineering_Lab/Sections/diagrams/Q0.jpeg}
+    \caption{Q0}
+    \label{fig:Q0}
+\end{figure} 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\columnwidth]{C:/Users/exone/Documents/GitHub/Embedded_Engineering_Lab/Sections/diagrams/Q1.jpeg}
+    \caption{Q1}
+    \label{fig:Q1}
+\end{figure} 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\columnwidth]{C:/Users/exone/Documents/GitHub/Embedded_Engineering_Lab/Sections/diagrams/Q2.jpeg}
+    \caption{Q2}
+    \label{fig:Q2}
+\end{figure} 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\columnwidth]{C:/Users/exone/Documents/GitHub/Embedded_Engineering_Lab/Sections/diagrams/Q3.jpeg}
+    \caption{Q3}
+    \label{fig:Q3}
+\end{figure} 
